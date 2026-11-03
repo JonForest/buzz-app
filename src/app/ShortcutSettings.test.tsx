@@ -26,6 +26,10 @@ import { createNavigationController } from "../features/navigation/controller";
 import { createMemoryHistory } from "../features/navigation/history";
 import { registerAppShortcuts, registerNavigationShortcuts } from "./shortcuts";
 import { PageSearch, type SearchServices } from "./shell/PageSearch";
+import {
+  enterInsertsNewLine,
+  setEnterInsertsNewLine,
+} from "../features/messages/send-key-preference";
 
 vi.mock("@tauri-apps/api/core", () => ({ isTauri: vi.fn(() => false) }));
 
@@ -1080,6 +1084,34 @@ it("shows desktop Close as reserved and read-only while other actions remain edi
   }
 });
 
+it("switches Enter to start a new line, saved on this device", async () => {
+  const h = await harness();
+  try {
+    render(
+      <ShortcutSettings
+        shortcuts={h.shortcuts}
+        bindings={h.bindings}
+        plugins={h.plugins}
+        apple
+      />,
+    );
+    const toggle = screen.getByRole("switch", {
+      name: "Enter starts a new line",
+    });
+    expect(toggle).not.toBeChecked();
+    expect(
+      screen.getByText("Send with ⌘ Enter or Ctrl Enter instead."),
+    ).toBeVisible();
+    await userEvent.setup().click(toggle);
+    expect(toggle).toBeChecked();
+    expect(enterInsertsNewLine()).toBe(true);
+    expect(localStorage.getItem("buzz-enter-inserts-new-line.v1")).toBe("on");
+  } finally {
+    setEnterInsertsNewLine(false);
+    await h.dispose();
+  }
+});
+
 it("lists the message editor's formatting keys read-only and warns when a shortcut takes one", async () => {
   const h = await harness();
   try {
@@ -1093,7 +1125,7 @@ it("lists the message editor's formatting keys read-only and warns when a shortc
     // Said once under the section heading, not on every row.
     expect(
       screen.getByText(
-        "Built into the message editor. These work while you type and can't be changed.",
+        "Built into the message editor. These shortcuts work while you type and can't be rebound.",
       ),
     ).toBeVisible();
     const code = row("Code");

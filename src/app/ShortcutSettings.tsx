@@ -2,6 +2,11 @@ import { SettingsGroup } from "../shared/design-system/ui/SettingsGroup";
 import { IconButton } from "../shared/design-system/ui/IconButton";
 import { PencilSimpleIcon, XIcon } from "../shared/design-system/icons";
 import { PreferenceRow } from "../shared/design-system/ui/PreferenceRow";
+import { SwitchPreferenceRow } from "../shared/design-system/ui/SwitchPreferenceRow";
+import {
+  setEnterInsertsNewLine,
+  useEnterInsertsNewLine,
+} from "../features/messages/send-key-preference";
 import { Header, InlineHeader } from "../shared/design-system/ui/Header";
 import {
   Fragment,
@@ -260,7 +265,7 @@ function useShortcutGroups({
       label: "Message formatting",
       sortKey: "editor",
       description:
-        "Built into the message editor. These work while you type and can't be changed.",
+        "Built into the message editor. These shortcuts work while you type and can't be rebound.",
       rows: editorRows,
     },
   ];
@@ -315,6 +320,10 @@ export function ShortcutSettings({
   });
   const [editing, setEditing] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const enterNewLine = useEnterInsertsNewLine();
+  const [sendKeyError, setSendKeyError] = useState<string | null>(null);
+  const changeEnterNewLine = (enabled: boolean) =>
+    setSendKeyError(setEnterInsertsNewLine(enabled));
   // A chord can become shared after capture (a plugin enabled later, a new
   // default in a release). The dispatcher then picks one silently, so each
   // affected row names the others.
@@ -414,6 +423,14 @@ export function ShortcutSettings({
                   subtitle={group.description}
                 />
                 <SettingsGroup>
+                  {group.id === "editor" && (
+                    <SwitchPreferenceRow
+                      label="Enter starts a new line"
+                      description={`Send with ${apple ? "⌘ Enter or Ctrl Enter" : "Ctrl Enter"} instead.`}
+                      checked={enterNewLine}
+                      onCheckedChange={changeEnterNewLine}
+                    />
+                  )}
                   {group.rows.map((row) => (
                     <ShortcutRow
                       key={row.key}
@@ -455,6 +472,19 @@ export function ShortcutSettings({
             Reset all shortcuts
           </Button>
         </div>
+        {sendKeyError && (
+          <div role="alert" className="grid gap-3 text-body-sm text-standard">
+            <p className="m-0">{sendKeyError}</p>
+            <div>
+              <Button
+                type="button"
+                onClick={() => changeEnterNewLine(enterNewLine)}
+              >
+                Retry saving Enter preference
+              </Button>
+            </div>
+          </div>
+        )}
         {error && (
           <div role="alert" className="grid gap-3 text-body-sm text-standard">
             <p className="m-0">{error}</p>

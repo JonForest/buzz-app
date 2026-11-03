@@ -61,6 +61,7 @@ import { ConversationPresentation } from "../conversation/ConversationPresentati
 import { AgentsContext } from "../agents/react";
 import type { Agents } from "../agents/service";
 import { MessageComposer, type MessageComposerProps } from "./MessageComposer";
+import { setEnterInsertsNewLine } from "./send-key-preference";
 import { MessageEditScope, useMessageEditScope } from "./MessageEditScope";
 import { registerMessageList } from "./message-selection";
 import { createRelaySession, type RelaySession } from "../relay/session";
@@ -4624,6 +4625,35 @@ it.each([
     expect(h.input()).toHaveValue("");
   },
 );
+
+it("with Enter starting a new line, sends only on ⌘ Enter or Ctrl Enter, lists included", async () => {
+  setEnterInsertsNewLine(true);
+  try {
+    const h = mount();
+    await h.user.type(h.input(), "first{Enter}second");
+    expect(h.input()).toHaveValue("first\nsecond");
+    expect(h.messages.send).not.toHaveBeenCalled();
+    await h.user.keyboard("{Meta>}{Enter}{/Meta}");
+    expect(h.messages.send).toHaveBeenCalledExactlyOnceWith(
+      "channel",
+      "first\nsecond",
+      [],
+      [],
+    );
+    await h.user.type(h.input(), "- item{Enter}next");
+    expect(h.input().querySelectorAll("ul > li")).toHaveLength(2);
+    await h.user.keyboard("{Control>}{Enter}{/Control}");
+    expect(h.messages.send).toHaveBeenLastCalledWith(
+      "channel",
+      "- item\n- next",
+      [],
+      [],
+    );
+    expect(h.messages.send).toHaveBeenCalledTimes(2);
+  } finally {
+    setEnterInsertsNewLine(false);
+  }
+});
 
 it("exits an empty list item on Enter, then sends from ordinary prose", async () => {
   const h = mount();

@@ -151,6 +151,7 @@ import type {
 import { TargetOpenerProvider } from "../conversation/opener";
 import { avatarMedia } from "../../shared/avatar-source";
 import { followUpBehaviorPreference } from "./follow-up-preference";
+import { sendsMessage, useEnterInsertsNewLine } from "./send-key-preference";
 import { followUpQueue } from "./follow-up-queue";
 import { QueuedFollowUps } from "./QueuedFollowUps";
 
@@ -875,6 +876,7 @@ function Composer({
   );
   const [linkEdit, setLinkEdit] = useState<ComposerLinkEdit | null>(null);
   if (!active && linkEdit) setLinkEdit(null);
+  const enterNewLine = useEnterInsertsNewLine();
   const [activeFormats, setActiveFormats] = useState<readonly ComposerFormat[]>(
     [],
   );
@@ -3194,19 +3196,15 @@ function Composer({
                   }
                   return;
                 }
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.altKey &&
-                  !event.ctrlKey &&
-                  !event.metaKey
-                ) {
+                if (sendsMessage(event, enterNewLine)) {
                   event.preventDefault();
                   // Holding Enter must not send after an empty list item exits.
                   if (event.repeat) return;
+                  // Plain Enter continues a list; the ⌘/Ctrl chord always sends.
                   if (
-                    activeFormats.includes("bullet_list") ||
-                    activeFormats.includes("ordered_list")
+                    !enterNewLine &&
+                    (activeFormats.includes("bullet_list") ||
+                      activeFormats.includes("ordered_list"))
                   ) {
                     event.currentTarget.insertLineBreak();
                     return;
